@@ -59,8 +59,6 @@ This project aims to provide a comprehensive solution for efficient parking mana
   - Risk of system manipulation or unauthorized access.
   - **Mitigation**: Implement strong cybersecurity measures, including regular system audits and hardening of models against adversarial attacks.
 
-## Task Ownership & Contributions:
-This project was developed by Team 412, consisting of:
 
 For any questions, feel free to reach out!
 
