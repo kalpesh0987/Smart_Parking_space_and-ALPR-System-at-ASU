@@ -1,0 +1,76 @@
+import cv2
+import pickle
+import numpy as np
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+# Load parking positions
+try:
+    with open('park_positions', 'rb') as f:
+        park_positions = pickle.load(f)
+except:
+    print("Error: Could not load park_positions")
+    park_positions = []
+
+# Initialize video capture
+cap = cv2.VideoCapture('parking.mp4')
+if not cap.isOpened():
+    print("Error: Could not open input/parking.mp4")
+else:
+    font = cv2.FONT_HERSHEY_COMPLEX_SMALL
+    width, height = 40, 19
+    full = width * height
+    empty = 0.22
+
+    # Get video resolution
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    print(f"Frame Resolution: {frame_width}x{frame_height}")
+
+    # Create a named window and set it to resize automatically
+    cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("frame", frame_width, frame_height)
+
+    def parking_space_counter(img_processed, overlay):
+        counter = 0
+        for position in park_positions:
+            x, y = position
+            img_crop = img_processed[y:y + height, x:x + width]
+            count = cv2.countNonZero(img_crop)
+            ratio = count / full
+            if ratio < empty:
+                color = (0, 255, 0)  # Green for empty
+                counter += 1
+            else:
+                color = (0, 0, 255)  # Red for occupied
+            cv2.rectangle(overlay, position, (position[0] + width, position[1] + height), color, -1)
+            cv2.putText(overlay, "{:.2f}".format(ratio), (x + 4, y + height - 4), font, 0.7, (255, 255, 255), 1, cv2.LINE_AA)
+        return counter
+
+    # Process video
+    while True:
+        if cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        success, frame = cap.read()
+        if not success:
+            print("Error: Could not read frame")
+            break
+        overlay = frame.copy()
+        img_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        img_blur = cv2.GaussianBlur(img_gray, (3, 3), 1)
+        img_thresh = cv2.adaptiveThreshold(img_blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 16)
+        counter = parking_space_counter(img_thresh, overlay)
+        alpha = 0.7
+        frame_new = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+        w, h = 220, 60
+        cv2.rectangle(frame_new, (0, 0), (w, h), (255, 0, 255), -1)
+        cv2.putText(frame_new, f"{counter}/{len(park_positions)}", (int(w / 10), int(h * 3 / 4)), font, 2, (255, 255, 255), 2, cv2.LINE_AA)
+
+        # Show the frame in the resized window
+        cv2.imshow('frame', frame_new)
+
+        if cv2.waitKey(1) & 0xFF == 27:  # ESC to exit
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
