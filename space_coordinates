@@ -1,0 +1,7 @@
+import pickle
+try:
+    with open('park_positions', 'rb') as f:
+        park_positions = pickle.load(f)
+    print("Parking positions:", park_positions)
+except:
+    print("Error: Could not load park_positions")
